@@ -285,7 +285,10 @@ export async function approveAndPublish(postId: string): Promise<ActionResult> {
       .from(postImages)
       .where(eq(postImages.id, claimed.selectedImageId))
       .limit(1);
-    if (img?.storageUrl && img.status === "ready") {
+    // Upload if the image is ready, OR re-upload if a previous publish attempt
+    // already pushed it (a new post needs a fresh asset URN — otherwise a retry
+    // or re-publish would silently drop the image).
+    if (img?.storageUrl && (img.status === "ready" || img.status === "uploaded_to_linkedin")) {
       try {
         const bytes = await getObject(urlToKey(img.storageUrl));
         imageUrn = await uploadImage(userId, bytes);
