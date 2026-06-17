@@ -1,0 +1,101 @@
+# ===========================================================================
+#  LinkedIn Post Studio — local stack
+#
+#  RECOMMENDED on Windows + RTX 5080: run Ollama and ComfyUI NATIVELY on
+#  Windows (best GPU performance, no passthrough config), and let these
+#  containers reach them via host.docker.internal. The app/worker default to
+#  OLLAMA_BASE_URL / COMFYUI_BASE_URL pointing at the host (see .env).
+#
+#  This file brings up: postgres, minio, the Next.js app, and the worker.
+#  (Full-Docker GPU inference is possible under WSL2 + NVIDIA Container
+#  Toolkit — see SETUP.md — but is intentionally not the default here.)
+# ===========================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: linkedin_studio
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # web console
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Creates the bucket on first boot so the app can write images immediately.
+  minio-setup:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      /bin/sh -c "
+      until (mc alias set local http://minio:9000 minioadmin minioadmin) do sleep 2; done;
+      mc mb -p local/post-images || true;
+      mc anonymous set download local/post-images || true;
+      echo 'bucket ready'; "
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      # Inside Docker, reach native Windows services + the minio container.
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/linkedin_studio
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      COMFYUI_BASE_URL: http://host.docker.internal:8188
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_URL: http://localhost:9000/post-images
+    ports:
+      - "3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ["npm", "run", "worker:start"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/linkedin_studio
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      COMFYUI_BASE_URL: http://host.docker.internal:8188
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_URL: http://localhost:9000/post-images
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  pgdata:
+  miniodata:

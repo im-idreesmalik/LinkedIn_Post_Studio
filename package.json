@@ -1,0 +1,50 @@
+{
+  "name": "linkedin-post-studio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-hosted, no-paid-API LinkedIn post generation tool with a mandatory human review gate",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "worker": "tsx watch worker/index.ts",
+    "worker:start": "tsx worker/index.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.658.0",
+    "@aws-sdk/s3-request-presigner": "^3.658.0",
+    "@react-email/components": "^0.0.25",
+    "@react-email/render": "^1.0.1",
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.36.0",
+    "next": "^15.0.0",
+    "next-auth": "5.0.0-beta.25",
+    "nodemailer": "^6.9.15",
+    "pg-boss": "^10.1.5",
+    "postgres": "^3.4.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "sharp": "^0.33.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "@types/nodemailer": "^6.4.16",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.20",
+    "drizzle-kit": "^0.28.0",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
