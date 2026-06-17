@@ -218,6 +218,19 @@ export interface PublishResult {
   body?: unknown;
 }
 
+/**
+ * The Posts API `commentary` field uses LinkedIn's "Little Text Format", where
+ * these characters are RESERVED and must be backslash-escaped — otherwise the
+ * published text is silently truncated at the first unescaped one (e.g. a "("
+ * cuts the post off mid-sentence). LinkedIn strips the backslash on render, so
+ * the reader sees the literal character. We escape the full reserved set EXCEPT
+ * "#", so our trailing hashtags stay clickable.
+ * Ref: LinkedIn Posts API — commentary text formatting.
+ */
+export function escapeCommentary(text: string): string {
+  return text.replace(/[\\()<>@[\]{}*_~|]/g, (ch) => `\\${ch}`);
+}
+
 /** Posts API: create a post on the member's own profile. */
 export async function publishPost(opts: {
   userId: string;
@@ -229,7 +242,7 @@ export async function publishPost(opts: {
 
   const payload: Record<string, unknown> = {
     author: memberUrn,
-    commentary: opts.commentary,
+    commentary: escapeCommentary(opts.commentary),
     visibility: "PUBLIC",
     distribution: {
       feedDistribution: "MAIN_FEED",
