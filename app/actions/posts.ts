@@ -18,7 +18,6 @@ import {
   postRevisions,
   publishLogs,
   auditLogs,
-  userSettings,
 } from "@/lib/db/schema";
 import { hasLinkedInConnection } from "@/lib/linkedin/store";
 import { uploadImage, publishPost, LinkedInError } from "@/lib/linkedin/client";
@@ -26,7 +25,6 @@ import {
   createImageAsset,
   buildImagePrompt,
   storeUploadedImage,
-  type ImageProviderName,
 } from "@/lib/ai/image";
 import { generateDailyPost } from "@/lib/content/generate";
 import { getObject, urlToKey, deleteObject } from "@/lib/storage";
@@ -124,18 +122,11 @@ export async function regenerateImage(postId: string): Promise<ActionResult> {
 
   try {
     const { niche } = await loadFingerprint(userId);
-    // Use the user's configured provider (e.g. Pollinations) — not the
-    // SDXL/ComfyUI default, which isn't running here.
-    const [settings] = await db
-      .select({ provider: userSettings.defaultImageProvider })
-      .from(userSettings)
-      .where(eq(userSettings.userId, userId))
-      .limit(1);
     const prompt = buildImagePrompt(post.hook ?? post.body ?? "professional topic", niche);
     const asset = await createImageAsset({
       prompt,
       keyPrefix: `${userId}/${postId}/${Date.now()}`,
-      provider: (settings?.provider ?? "pollinations") as ImageProviderName,
+      provider: "pollinations",
     });
     await db
       .update(postImages)

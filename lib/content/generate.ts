@@ -20,7 +20,6 @@ import {
   createImageAsset,
   buildImagePrompt,
   buildImagePromptFromConcept,
-  type ImageProviderName,
 } from "@/lib/ai/image";
 import { log } from "@/lib/logger";
 
@@ -146,7 +145,7 @@ export async function generateDailyPost(
         const asset = await createImageAsset({
           prompt,
           keyPrefix: `${userId}/${postId}/${Date.now()}`,
-          provider: (settings?.defaultImageProvider ?? "stable_diffusion") as ImageProviderName,
+          provider: "pollinations",
         });
         const [img] = await db
           .insert(postImages)

@@ -207,13 +207,3 @@ export async function sendTestEmail(): Promise<ActionResult> {
     };
   }
 }
-
-export async function setDailyGeneration(enabled: boolean): Promise<ActionResult> {
-  const userId = await requireUserId();
-  await db
-    .update(userSettings)
-    .set({ dailyGenerationEnabled: enabled, updatedAt: new Date() })
-    .where(eq(userSettings.userId, userId));
-  revalidatePath("/settings");
-  return { ok: true };
-}

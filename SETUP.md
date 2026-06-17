@@ -1,8 +1,8 @@
 # Setup & Run — LinkedIn Post Studio
 
-Local-first, **no paid APIs**. The AI runs on your machine (Ollama + ComfyUI), email
-goes over free SMTP, jobs run in Postgres (pg-boss), images live in MinIO. The only
-external call is LinkedIn's (free) API.
+Local-first, **no paid APIs**. Captions use Gemini's free tier (Ollama as offline fallback),
+images use Pollinations (free, keyless), email goes over free SMTP, jobs run in Postgres
+(pg-boss), images live in MinIO. The only external call is LinkedIn's (free) API.
 
 This guide targets the confirmed dev machine: **Windows 11 + RTX 5080 (16 GB)**.
 
@@ -14,28 +14,26 @@ This guide targets the confirmed dev machine: **Windows 11 + RTX 5080 (16 GB)**.
 |------|-----|-------|
 | **Node.js 20+** | app + worker | https://nodejs.org |
 | **Docker Desktop** | Postgres + MinIO (+ optional app/worker) | WSL2 backend |
-| **Ollama** (native Windows) | local captions | https://ollama.com — auto-uses the RTX 5080 |
-| **ComfyUI** (native Windows) | local SDXL images | https://github.com/comfyanonymous/ComfyUI |
+| **Ollama** (native Windows) | local caption fallback | https://ollama.com — auto-uses the RTX 5080 |
 | **A LinkedIn Developer app** | publishing | see §5 |
 | **An SMTP account** | daily email | your mailbox + app password is fine |
 
-> **Why native Ollama/ComfyUI?** On Windows, Docker reaches the GPU only via WSL2 + the
-> NVIDIA Container Toolkit. Running these two natively is simpler and faster; the app/worker
-> reach them through `host.docker.internal`. (Full-Docker GPU is possible — see §7.)
+> **Why native Ollama?** On Windows, Docker reaches the GPU only via WSL2 + the NVIDIA
+> Container Toolkit. Running Ollama natively is simpler and faster; the app/worker reach it
+> through `host.docker.internal`. Captions use Gemini (free-tier) by default, with Ollama as
+> the offline fallback. Images use Pollinations (free, keyless) — nothing to install.
 
 ---
 
 ## 1. Install local models
 
+Captions/topics use **Gemini 2.5 Flash** (free-tier) by default. Ollama is only the offline
+fallback — pull a model if you want it:
 ```powershell
-# Captions (pick one; 14B is great on a 16 GB GPU)
+# Optional offline caption fallback (14B is great on a 16 GB GPU)
 ollama pull qwen2.5:14b      # or: ollama pull llama3.1:8b
-
-# Images: download an SDXL checkpoint into ComfyUI\models\checkpoints\
-#   e.g. sd_xl_base_1.0.safetensors  (must match COMFYUI_SDXL_CHECKPOINT in .env)
 ```
-Start ComfyUI so its API is up at http://localhost:8188, and confirm Ollama at
-http://localhost:11434.
+Images are generated via **Pollinations** (free, keyless) — nothing to install.
 
 ## 2. Configure environment
 
@@ -100,10 +98,10 @@ npm run worker
 ```powershell
 docker compose up -d --build      # postgres, minio, app, worker
 ```
-The `app` and `worker` services reach native Ollama/ComfyUI via `host.docker.internal`
-(already wired in docker-compose.yml). For **full-Docker GPU inference**, add `ollama` and
-`comfyui` services with the NVIDIA Container Toolkit under WSL2 and point
-`OLLAMA_BASE_URL` / `COMFYUI_BASE_URL` at them — not required for the default setup.
+The `app` and `worker` services reach native Ollama via `host.docker.internal`
+(already wired in docker-compose.yml). For **full-Docker GPU inference**, add an `ollama`
+service with the NVIDIA Container Toolkit under WSL2 and point `OLLAMA_BASE_URL` at it —
+not required for the default setup.
 
 ---
 
@@ -122,8 +120,8 @@ The `app` and `worker` services reach native Ollama/ComfyUI via `host.docker.int
 | Symptom | Fix |
 |---------|-----|
 | `TOKEN_ENC_KEY must be a base64-encoded 32-byte key` | Regenerate with the node one-liner in §2 |
-| Image generation times out | Ensure ComfyUI is running and `COMFYUI_SDXL_CHECKPOINT` matches a file in `models/checkpoints` |
-| Captions fail | Ensure Ollama is running and `OLLAMA_CAPTION_MODEL` is pulled |
+| Image generation fails | Pollinations' free endpoint is occasionally flaky; the app retries 3×. Regenerate from the editor if needed |
+| Captions fail | Set `GEMINI_API_KEY` (free-tier), or run Ollama with `OLLAMA_CAPTION_MODEL` pulled for the offline fallback |
 | Publish says "reconnect" | Token expired/no refresh token — click Connect LinkedIn in Settings |
 | App can't reach DB from Docker | Use the in-container `DATABASE_URL` (postgres host), already set in compose |
 | Images 404 in the app | Confirm the `post-images` bucket exists and is download-public (the `minio-setup` service does this) |

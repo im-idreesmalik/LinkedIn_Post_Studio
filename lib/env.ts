@@ -23,10 +23,7 @@ const schema = z.object({
   OLLAMA_BASE_URL: z.string().url().default("http://localhost:11434"),
   OLLAMA_CAPTION_MODEL: z.string().default("qwen2.5:14b"),
 
-  COMFYUI_BASE_URL: z.string().url().default("http://localhost:8188"),
-  COMFYUI_SDXL_CHECKPOINT: z.string().default("sd_xl_base_1.0.safetensors"),
-
-  // Gemini 2.5 Flash Image ("Nano Banana") — free-tier API key (optional).
+  // Gemini 2.5 Flash — free-tier API key for captions/topics (text only).
   GEMINI_API_KEY: z.string().default(""),
 
   S3_ENDPOINT: z.string().url().default("http://localhost:9000"),
